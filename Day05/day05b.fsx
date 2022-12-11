@@ -1,6 +1,6 @@
 open System.IO
 
-let fileName = "Day05/day05.test.data"
+let fileName = "Day05/day05.data"
 let lines = File.ReadAllLines(fileName)
 
 type ReadState =
