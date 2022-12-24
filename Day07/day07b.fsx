@@ -123,26 +123,48 @@ let getDirectorySizes (directory: DirectoryEntry) : (string*int) list =
             |> Seq.sumBy (function
                           | FileNode (_,_,size) -> size
                           | _ -> 0)
-        let subDirs =
+        let subDirs, subDirsTotal =
             entries
-            |> Seq.choose (fun entry ->
-                            match entry with
-                            | DirectoryNode (_,_,_) -> Some entry
-                            | _ -> None)
-            |> Seq.fold (fun state entry -> loop entry @ state) []
+            |> Seq.filter (function
+                            | DirectoryNode (_,_,_) -> true
+                            | _ -> false)
+            |> Seq.fold (fun (state,total) entry ->
+                            let result = loop entry 
+                            (result @ state), total + (result |> List.head |> snd)) ([],0)
 
-        let subDirsTotal =
-            subDirs
-            |> Seq.sumBy(snd)
-        
         (name,(filesTotal+subDirsTotal))::subDirs
     loop directory
 
+let printDirectory directory =
+    let getNameAndInfo = function
+        | DirectoryNode (name,_,_) -> sprintf "%s (dir)" name
+        | FileNode (name,_,size) -> sprintf "%s (file, size=%i)" name size
+
+    let rec loop entry depth =
+        let indent = String.replicate (depth*2) " "
+        printfn "%s- %s" indent (getNameAndInfo entry)
+        match entry with
+        | DirectoryNode (_,_,entries) ->
+            for entry in entries do
+                loop entry (depth+1)
+        | _ -> ()
+        ()
+    loop directory 0
+
 let sizes = getDirectorySizes rootDir
+
+let totalFileSystemSize = 70_000_000
+let unusedSpaceRequired = 30_000_000
+let totalCurrentSize = sizes |> Seq.find (fun (n,_) -> n = "/") |> snd
+let sizeRequired = unusedSpaceRequired - (totalFileSystemSize - totalCurrentSize)
 
 let result =
     sizes
-    |> Seq.filter (fun (_,s) -> s <= 100000)
-    |> Seq.sumBy (snd)
+    |> Seq.filter (fun (_,s) -> s >= sizeRequired )
+    |> Seq.sortBy (snd)
+    |> Seq.head
+    |> snd
+
+//printDirectory rootDir
 
 printfn "Result: %i" result
