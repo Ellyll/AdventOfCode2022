@@ -2,15 +2,8 @@
 open System.IO
 open FSharp.Quotations.Evaluator
 
-let fileName = "Day11/day11.test.data"
+let fileName = "Day11/day11.data"
 let lines = File.ReadAllLines(fileName)
-
-// Monkey 0:
-//   Starting items: 79, 98
-//   Operation: new = old * 19
-//   Test: divisible by 23
-//     If true: throw to monkey 2
-//     If false: throw to monkey 3
 
 type Monkey = {
     Items: int64 list
@@ -86,6 +79,7 @@ let _, monkeys =
 
 
 let takeTurn (monkeyId: int) (monkeys: Map<int,Monkey>) : Map<int,Monkey> =
+    let maxValue = monkeys |> Map.values |> Seq.map (fun m -> m.Test) |> Seq.reduce (*)
     let monkey = monkeys[monkeyId]
     let items = monkey.Items
     let monkey' = { monkey with Items = [] ; NoOfInspections = monkey.NoOfInspections + int64 (List.length monkey.Items) }
@@ -97,7 +91,7 @@ let takeTurn (monkeyId: int) (monkeys: Map<int,Monkey>) : Map<int,Monkey> =
 
     items
     |> List.fold (fun ms item ->
-            let worryLevel = (monkey.Operation item)
+            let worryLevel = (monkey.Operation item) % maxValue
             let target =
                 if (worryLevel % monkey.Test = 0 ) then
                     monkey.TrueTarget
@@ -107,7 +101,6 @@ let takeTurn (monkeyId: int) (monkeys: Map<int,Monkey>) : Map<int,Monkey> =
                 match v with
                 | None -> failwithf "Monkey not found: %i for item %i for monkey %A" target item monkey
                 | Some m ->
-                    //printfn "DEBUG: Monkey %i: moving item %i, worryLevel %i, from %i to %i" monkeyId item worryLevel monkeyId target
                     Some { m with Items = m.Items @ [ worryLevel ]})
         ) monkeys'
 
@@ -119,7 +112,7 @@ let runRound monkeys =
         ) monkeys
 
 let finalMonkeys =
-    seq { 1..1000 }
+    seq { 1..10000 }
     |> Seq.fold (fun ms _ -> runRound ms) monkeys
 
 finalMonkeys
